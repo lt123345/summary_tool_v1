@@ -123,9 +123,43 @@ for table in filtered_data:
       found_targets.add(target)
       results[target] = [target, search_text, actual, expected]
 
+# 特别处理的指标
+# 病种总例数＝表单内所有疾病名称下，病例数的总和。例如放疗科是
+# 入径率＝入径数/病种总病例数
+# 完成率＝变异完成例数/病种总例数。
+def format_float(f):
+  res = f"{f:.2f}"
+  if res[-1] == "0":
+    res = res[:-1]
+  return res
+
+def get_special_metrics():
+  tables = [t for t in filtered_data if len(t) > 0 and "病种名称" in t[0]]
+  if len(tables) == 0 or len(tables[0]) < 2:
+    return {}
+  table = tables[0]
+  total_col = 2
+  rujing_col = 3
+  finish_col = 5
+  total = 0
+  rujing = 0
+  finish = 0
+  data_rows = table[1:]
+  for row in data_rows:
+    total += int(row[total_col])
+    rujing += int(row[rujing_col])
+    finish += int(row[finish_col])
+  return {
+    "临床路径入径率": ["临床路径入径率", "= 入径数/病种总病例数", format_float(rujing / total * 100), ""],
+    "临床路径完成率": ["临床路径完成率", "= 变异完成例数/病种总例数", format_float(finish / total * 100), ""],
+    "重点疾病例数": ["重点疾病例数", "= 病种总例数", format_float(total), ""]
+  }
+
+results.update(get_special_metrics())
+
 st.write("## 解析结果")
 
-results_df = DataFrame(results.values(), columns=["指标", "搜索关键字", "实际值", "目标值"])
+results_df = DataFrame(results.values(), columns=["指标", "搜索方法", "实际值", "目标值"])
 results_df.sort_values(by="指标")
 col1, _ = st.columns(2)
 with col1:
