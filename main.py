@@ -7,7 +7,7 @@ st.set_page_config(layout="wide")
 
 st.title("神秘的数据统计工具")
 
-data_doc_path = "/Users/lantian/Desktop/zhouji/2023年03月质控简报.docx"
+data_doc_path = "/Users/lantian/Desktop/zhouji/2023年08月质控简报.docx"
 record_doc = docx.Document(data_doc_path)
 tables = record_doc.tables
 
@@ -164,6 +164,20 @@ results_df.sort_values(by="指标")
 col1, _ = st.columns(2)
 with col1:
   st.table(results_df)
+
+# 找到诊断问题
+def search_paragraph(search_text):
+  results = []
+  for paragraph in record_doc.paragraphs:
+    text = remove_blanks(paragraph.text)
+    if search_text in text:
+      results.append(text)
+  return results
+
+wrong_diagnose = search_paragraph(f"{keshi}处方号")
+wrong_diagnose = [f"（{i+1}）{text[4:]}" for i, text in enumerate(wrong_diagnose)]
+wrong_diagnose_df = DataFrame(wrong_diagnose, columns=["门急诊处方点评公布"])
+st.table(wrong_diagnose_df)
 
 st.write("----")
 st.write("## 参考数据")
