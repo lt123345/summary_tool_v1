@@ -161,6 +161,7 @@ st.write("## 解析结果")
 
 results_df = DataFrame(results.values(), columns=["指标", "搜索方法", "实际值", "目标值"])
 results_df.sort_values(by="指标")
+st.write("**指标搜索结果**")
 col1, _ = st.columns(2)
 with col1:
   st.table(results_df)
@@ -177,11 +178,26 @@ def search_paragraph(search_text):
 wrong_diagnose = search_paragraph(f"{keshi}处方号")
 wrong_diagnose = [f"（{i+1}）{text[4:]}" for i, text in enumerate(wrong_diagnose)]
 wrong_diagnose_df = DataFrame(wrong_diagnose, columns=["门急诊处方点评公布"])
+st.write("**门急诊处方点评公布**")
 st.table(wrong_diagnose_df)
 
-st.write("----")
-st.write("## 参考数据")
+# 找到环节病历
+def get_bingli():
+  tables = [t for t in filtered_data if len(t) > 0 and "患者姓名" in t[0] and "住院号" in t[0]]
+  if len(tables) == 0 or len(tables[0]) < 2:
+    return []
+  table = tables[0]
+  bingli = table[1:]
+  return bingli
 
-for table_data in filtered_data:
-  if len(table_data) >= 1:
-    st.table(table_data)
+bingli = get_bingli()
+bingli_df = DataFrame(bingli, columns=["科室", "患者姓名", "住院号", "存在问题", "病历等级"])
+st.write("**环节病历**")
+st.table(bingli_df)
+
+# st.write("----")
+# st.write("## 参考数据")
+
+# for table_data in filtered_data:
+#   if len(table_data) >= 1:
+#     st.table(table_data)
