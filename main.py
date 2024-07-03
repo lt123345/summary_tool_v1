@@ -1,3 +1,4 @@
+from io import BytesIO
 import streamlit as st
 import docx
 from pandas import DataFrame
@@ -7,8 +8,12 @@ st.set_page_config(layout="wide")
 
 st.title("神秘的数据统计工具")
 
-data_doc_path = "/Users/lantian/Desktop/zhouji/2023年08月质控简报.docx"
-record_doc = docx.Document(data_doc_path)
+# data_doc_path = "/Users/lantian/Desktop/zhouji/2023年08月质控简报.docx"
+uploaded_file = st.file_uploader("选择简报文件(docx)", type="docx")
+if not uploaded_file:
+  st.stop()
+
+record_doc = docx.Document(uploaded_file)
 tables = record_doc.tables
 
 keshi = "放射治疗科"
@@ -161,11 +166,6 @@ st.write("## 解析结果")
 
 results_df = DataFrame(results.values(), columns=["指标", "搜索方法", "实际值", "目标值"])
 results_df.sort_values(by="指标")
-st.write("**指标搜索结果**")
-col1, _ = st.columns(2)
-with col1:
-  st.table(results_df)
-
 # 找到诊断问题
 def search_paragraph(search_text):
   results = []
@@ -177,9 +177,6 @@ def search_paragraph(search_text):
 
 wrong_diagnose = search_paragraph(f"{keshi}处方号")
 wrong_diagnose = [f"（{i+1}）{text[4:]}" for i, text in enumerate(wrong_diagnose)]
-wrong_diagnose_df = DataFrame(wrong_diagnose, columns=["门急诊处方点评公布"])
-st.write("**门急诊处方点评公布**")
-st.table(wrong_diagnose_df)
 
 # 找到环节病历
 def get_bingli():
@@ -187,10 +184,52 @@ def get_bingli():
   if len(tables) == 0 or len(tables[0]) < 2:
     return []
   table = tables[0]
-  bingli = table[1:]
+  bingli = [row[0: 5] for row in table[1:]]
   return bingli
 
 bingli = get_bingli()
+
+
+# st.write("## 结果下载")
+output_file_path = "./放射治疗科2023年03月医疗质量与安全检查记录.docx"
+output_doc = docx.Document(output_file_path)
+output_tables = output_doc.tables
+
+metrics_table = [table for table in output_tables if remove_blanks(table.rows[0].cells[0].text) == "指标"][0]
+for row in metrics_table.rows:
+  metrics_name = remove_blanks(row.cells[0].text)
+  if metrics_name in results:
+    _, _, actual, expected = results[metrics_name]
+    row.cells[1].text = actual
+    row.cells[2].text = expected
+  
+  metrics_name = remove_blanks(row.cells[3].text)
+  if metrics_name in results:
+    _, _, actual, expected = results[metrics_name]
+    row.cells[4].text = actual
+    row.cells[5].text = expected
+
+output = BytesIO()
+output_doc.save(output)
+
+st.download_button(
+    label="下载填写好的表格",
+    data=output.getvalue(),
+    file_name="放射治疗科2023年03月医疗质量与安全检查记录.docx",
+    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+)
+
+### 显示统计结果
+
+st.write("**指标搜索结果**")
+col1, _ = st.columns(2)
+with col1:
+  st.table(results_df)
+
+wrong_diagnose_df = DataFrame(wrong_diagnose, columns=["门急诊处方点评公布"])
+st.write("**门急诊处方点评公布**")
+st.table(wrong_diagnose_df)
+
 bingli_df = DataFrame(bingli, columns=["科室", "患者姓名", "住院号", "存在问题", "病历等级"])
 st.write("**环节病历**")
 st.table(bingli_df)
