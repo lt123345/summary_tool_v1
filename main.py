@@ -242,10 +242,10 @@ for i, item in enumerate(yiji_bingli):
 output = BytesIO()
 output_doc.save(output)
 
-st.write("## 下载填写的表格")
+st.write("## 下载填好的表格")
 
 st.download_button(
-    label="下载",
+    label="💾 下载",
     type="primary",
     data=output.getvalue(),
     file_name=quote("放射治疗科2023年03月医疗质量与安全检查记录.docx"),
@@ -254,19 +254,19 @@ st.download_button(
 
 ### 显示统计结果
 
-st.write("## 解析结果")
-st.write("**指标搜索结果**")
-col1, _ = st.columns(2)
-with col1:
-  st.table(results_df)
+# st.write("## 解析结果")
+# st.write("**指标搜索结果**")
+# col1, _ = st.columns(2)
+# with col1:
+#   st.table(results_df)
 
-wrong_diagnose_df = DataFrame(wrong_diagnose, columns=["门急诊处方点评公布"])
-st.write("**门急诊处方点评公布**")
-st.table(wrong_diagnose_df)
+# wrong_diagnose_df = DataFrame(wrong_diagnose, columns=["门急诊处方点评公布"])
+# st.write("**门急诊处方点评公布**")
+# st.table(wrong_diagnose_df)
 
-bingli_df = DataFrame(bingli, columns=["科室", "患者姓名", "住院号", "存在问题", "病历等级"])
-st.write("**环节病历**")
-st.table(bingli_df)
+# bingli_df = DataFrame(bingli, columns=["科室", "患者姓名", "住院号", "存在问题", "病历等级"])
+# st.write("**环节病历**")
+# st.table(bingli_df)
 
 # st.write("----")
 # st.write("## 参考数据")
