@@ -195,6 +195,7 @@ output_file_path = "./放射治疗科2023年03月医疗质量与安全检查记�
 output_doc = docx.Document(output_file_path)
 output_tables = output_doc.tables
 
+# 写入指标
 metrics_table = [table for table in output_tables if remove_blanks(table.rows[0].cells[0].text) == "指标"][0]
 for row in metrics_table.rows:
   metrics_name = remove_blanks(row.cells[0].text)
@@ -209,6 +210,30 @@ for row in metrics_table.rows:
     row.cells[4].text = actual
     row.cells[5].text = expected
 
+# 写入甲级环节病例
+# bingli_table = [table for table in output_tables if remove_blanks(table.rows[0].cells[0].text) == "甲级环节病例"][0]
+jiaji_bingli = [item for item in bingli if "甲级" in item[4]]
+temp_table = []
+bingli_table = output_tables[1].cell(0, 1).tables[0]
+
+if len(jiaji_bingli) > 3:
+  for i in range(3, len(jiaji_bingli)):
+    bingli_table.add_row()
+
+for i, item in enumerate(jiaji_bingli):
+  _, huanzhe, zhuyuanhao, problem, level = item
+  row = bingli_table.rows[i+1]
+  row.cells[0].text = str(i+1)
+  for j in range(1, 5):
+    row.cells[j].text = item[j]
+
+for row in bingli_table.rows:
+  temp_table.append([remove_blanks(cell.text) for cell in row.cells])
+st.table(temp_table)
+
+# 写入诊断问题
+wenti_cell = output_tables[1].cell(0, 1)
+
 output = BytesIO()
 output_doc.save(output)
 
@@ -220,7 +245,6 @@ st.download_button(
 )
 
 ### 显示统计结果
-
 st.write("**指标搜索结果**")
 col1, _ = st.columns(2)
 with col1:
