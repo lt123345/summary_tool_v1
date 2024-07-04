@@ -26,10 +26,9 @@ month = int(filename_match.group(2))
 record_doc = docx.Document(uploaded_file)
 tables = record_doc.tables
 
-keshi = "放射治疗科"
 
 def remove_blanks(s):
-  return s.replace("\n", "").replace(" ", "")
+  return s.replace("\n", "").replace(" ", "").replace("\u3000", "")
 
 def is_header_text(s):
   return "指标" in s or "项目" in s or "科室" in s or "科别" in s
@@ -40,6 +39,24 @@ for table in tables:
   for row in table.rows:
     data_table.append([remove_blanks(cell.text) for cell in row.cells])
   data_tables.append(data_table)
+
+all_keshi: set[str] = set()
+for row in data_tables[1]:
+  name = remove_blanks(row[0])
+  if name and name != "项目" and name != "科室":
+    all_keshi.add(name)
+
+all_keshi_sorted = sorted(all_keshi)
+
+col1, _, _ = st.columns(3)
+with col1:
+  index = 0
+  if "keshi" in st.session_state and st.session_state.keshi in all_keshi:
+    index = all_keshi_sorted.index(st.session_state.keshi)
+
+  # def handle_keshi_change():
+  keshi = st.selectbox("选择科室", all_keshi_sorted, key="keshi_selector", index=index)
+  st.session_state.keshi = keshi
 
 # 合并多列表格成一列
 for i in range(len(data_tables)):
@@ -275,7 +292,7 @@ for p in output_doc.paragraphs:
 output = BytesIO()
 output_doc.save(output)
 
-st.write("## 下载填好的表格")
+st.write("## 下载统计结果")
 
 download_filename = f"{keshi}{year:04d}年{month:02d}月医疗质量与安全检查记录.docx"
 st.download_button(
@@ -287,7 +304,7 @@ st.download_button(
 
 ### 显示统计结果
 
-# st.write("## 解析结果")
+# st.write("## 解析结果预览")
 # st.write("**指标搜索结果**")
 # col1, _ = st.columns(2)
 # with col1:
