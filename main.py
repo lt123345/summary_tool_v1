@@ -4,6 +4,7 @@ import docx
 from pandas import DataFrame
 import re
 from urllib.parse import quote
+import copy
 
 st.set_page_config(layout="wide")
 
@@ -13,6 +14,14 @@ st.title("神秘的数据统计工具")
 uploaded_file = st.file_uploader("选择简报文件(docx)", type="docx")
 if not uploaded_file:
   st.stop()
+
+filename_match = re.match(r"(\d+)年(\d+)月\.*", uploaded_file.name)
+if not filename_match:
+  st.error("无法从文件名中解析年份和月份")
+  st.stop()
+
+year = int(filename_match.group(1))
+month = int(filename_match.group(2))
 
 record_doc = docx.Document(uploaded_file)
 tables = record_doc.tables
@@ -211,14 +220,27 @@ for row in metrics_table.rows:
     row.cells[5].text = expected
 
 # 写入甲级环节病例
-# bingli_table = [table for table in output_tables if remove_blanks(table.rows[0].cells[0].text) == "甲级环节病例"][0]
 jiaji_bingli = [item for item in bingli if "甲级" in item[4]]
 temp_table = []
 bingli_table = output_tables[1].cell(0, 1).tables[0]
 
+def copy_cell_properties(source_cell, dest_cell):
+    cell_properties = source_cell._tc.get_or_add_tcPr()
+    dest_cell._tc.remove(dest_cell._tc.get_or_add_tcPr())
+    cell_properties = copy.copy(cell_properties)
+    dest_cell._tc.append(cell_properties)
+
+def copy_row_properties(source_row, dest_row):
+  for i in range(len(source_row.cells)):
+    source_cell = source_row.cells[i]
+    dest_cell = dest_row.cells[i]
+    copy_cell_properties(source_cell, dest_cell)
+
 if len(jiaji_bingli) > 3:
+  first_row = bingli_table.rows[0]
   for i in range(3, len(jiaji_bingli)):
-    bingli_table.add_row()
+    new_row = bingli_table.add_row()
+    copy_row_properties(first_row, new_row)
 
 for i, item in enumerate(jiaji_bingli):
   _, huanzhe, zhuyuanhao, problem, level = item
@@ -228,27 +250,38 @@ for i, item in enumerate(jiaji_bingli):
     row.cells[j].text = item[j]
 
 # 写入诊断问题
-wenti_cell = output_tables[1].cell(0, 7)
+wenti_cell = output_tables[1].cell(0, 10)
 wenti_cell.text = ""
 for text in wrong_diagnose:
-  wenti_cell.add_paragraph(text)
+  if remove_blanks(wenti_cell.text) == "":
+    wenti_cell.text = text
+  else:
+    wenti_cell.add_paragraph(text)
 
 # 写入乙级病例
 yiji_bingli = [item for item in bingli if "乙级" in item[4]]
 for i, item in enumerate(yiji_bingli):
   _, huanzhe, zhuyuanhao, problem, level = item
-  wenti_cell.add_paragraph(f"（{len(wrong_diagnose)+i+1}）患者{huanzhe}（住院号：{zhuyuanhao}），存在问题：{problem}")
+  text = f"（{len(wrong_diagnose)+i+1}）患者{huanzhe}（住院号：{zhuyuanhao}），存在问题：{problem}"
+  if remove_blanks(wenti_cell.text) == "":
+    wenti_cell.text = text
+  else:
+    wenti_cell.add_paragraph(text)
+
+# 替换科室和年月
+for p in output_doc.paragraphs:
+  p.text = p.text.replace("放射治疗科", f"{keshi}").replace(f"2023年03月", f"{year:04d}年{month:02d}月")
 
 output = BytesIO()
 output_doc.save(output)
 
 st.write("## 下载填好的表格")
 
+download_filename = f"{keshi}{year:04d}年{month:02d}月医疗质量与安全检查记录.docx"
 st.download_button(
-    label="💾 下载",
-    type="primary",
+    label=f"💾 {download_filename}",
     data=output.getvalue(),
-    file_name=quote("放射治疗科2023年03月医疗质量与安全检查记录.docx"),
+    file_name=quote(download_filename),
     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 )
 
