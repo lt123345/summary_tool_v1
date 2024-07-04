@@ -3,6 +3,7 @@ import streamlit as st
 import docx
 from pandas import DataFrame
 import re
+from urllib.parse import quote
 
 st.set_page_config(layout="wide")
 
@@ -162,10 +163,9 @@ def get_special_metrics():
 
 results.update(get_special_metrics())
 
-st.write("## 解析结果")
-
 results_df = DataFrame(results.values(), columns=["指标", "搜索方法", "实际值", "目标值"])
 results_df.sort_values(by="指标")
+
 # 找到诊断问题
 def search_paragraph(search_text):
   results = []
@@ -227,24 +227,34 @@ for i, item in enumerate(jiaji_bingli):
   for j in range(1, 5):
     row.cells[j].text = item[j]
 
-for row in bingli_table.rows:
-  temp_table.append([remove_blanks(cell.text) for cell in row.cells])
-st.table(temp_table)
-
 # 写入诊断问题
-wenti_cell = output_tables[1].cell(0, 1)
+wenti_cell = output_tables[1].cell(0, 7)
+wenti_cell.text = ""
+for text in wrong_diagnose:
+  wenti_cell.add_paragraph(text)
+
+# 写入乙级病例
+yiji_bingli = [item for item in bingli if "乙级" in item[4]]
+for i, item in enumerate(yiji_bingli):
+  _, huanzhe, zhuyuanhao, problem, level = item
+  wenti_cell.add_paragraph(f"（{len(wrong_diagnose)+i+1}）患者{huanzhe}（住院号：{zhuyuanhao}），存在问题：{problem}")
 
 output = BytesIO()
 output_doc.save(output)
 
+st.write("## 下载填写的表格")
+
 st.download_button(
-    label="下载填写好的表格",
+    label="下载",
+    type="primary",
     data=output.getvalue(),
-    file_name="放射治疗科2023年03月医疗质量与安全检查记录.docx",
+    file_name=quote("放射治疗科2023年03月医疗质量与安全检查记录.docx"),
     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
 )
 
 ### 显示统计结果
+
+st.write("## 解析结果")
 st.write("**指标搜索结果**")
 col1, _ = st.columns(2)
 with col1:
