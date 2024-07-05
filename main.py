@@ -102,7 +102,7 @@ targets = [
   ["病床使用率",r"病床使用率"],
   ["病床周转率",r"病床周转率"],
   ["平均住院日",r"平均住院日"],
-  ["治愈好转率",r"好转率"],
+  ["治愈好转率",r"治愈好转率%"],
   ["入院与出院诊断符合率",r"入院与出院诊断符合率"],
   ["成分输血率",r"成份输血率"],
   ["抗菌药物使用率",r"抗菌药物使用率"],
@@ -115,7 +115,7 @@ targets = [
 ]
 results = {}
 for target, search_text in targets:
-  results[target] = [target, search_text, "", ""]
+  results[target] = [target, search_text, "0", ""]
 
 found_targets = set()
 
@@ -133,7 +133,7 @@ def find_value_v3(table, target_row_name, target_column_name):
 
   found_values = []
   for row in table:
-    row_name = row[0] + row[1]
+    row_name = row[0:2]
     cell = row[column_index]
     if target_row_name in row_name or ("科室" in row_name and "≥" in cell):
       found_values.append(cell)
@@ -159,16 +159,18 @@ for table in filtered_data:
 # 病种总例数＝表单内所有疾病名称下，病例数的总和。例如放疗科是
 # 入径率＝入径数/病种总病例数
 # 完成率＝变异完成例数/病种总例数。
-def format_float(f):
-  res = f"{f:.2f}"
-  if res[-1] == "0":
-    res = res[:-1]
-  return res
+def format_float(f: float):
+  s = round(f, 2)
+  return str(s).rstrip("0").rstrip(".")
 
 def get_special_metrics():
   tables = [t for t in filtered_data if len(t) > 0 and "病种名称" in t[0]]
   if len(tables) == 0 or len(tables[0]) < 2:
-    return {}
+    return {
+      "临床路径入径率": ["临床路径入径率", "= 入径数/病种总病例数", "0", ""],
+      "临床路径完成率": ["临床路径完成率", "= 变异完成例数/病种总例数", "0", ""],
+      "重点疾病例数": ["重点疾病例数", "= 病种总例数", "0", ""]
+    }
   table = tables[0]
   total_col = 2
   rujing_col = 3
@@ -189,9 +191,6 @@ def get_special_metrics():
 
 results.update(get_special_metrics())
 
-results_df = DataFrame(results.values(), columns=["指标", "搜索方法", "实际值", "目标值"])
-results_df.sort_values(by="指标")
-
 # 找到诊断问题
 def search_paragraph(search_text):
   results = []
@@ -200,6 +199,9 @@ def search_paragraph(search_text):
     if search_text in text:
       results.append(text)
   return results
+
+# 强行写的指标
+results["成分输血率"] = ["成分输血率", "（固定值）", "100%", "100%"]
 
 wrong_diagnose = search_paragraph(f"{keshi}处方号")
 wrong_diagnose = [f"（{i+1}）{text[4:]}" for i, text in enumerate(wrong_diagnose)]
@@ -304,23 +306,40 @@ st.download_button(
 
 ### 显示统计结果
 
-# st.write("## 解析结果预览")
-# st.write("**指标搜索结果**")
-# col1, _ = st.columns(2)
-# with col1:
-#   st.table(results_df)
+if "debug" not in st.session_state:
+  st.session_state.debug = False
 
-# wrong_diagnose_df = DataFrame(wrong_diagnose, columns=["门急诊处方点评公布"])
-# st.write("**门急诊处方点评公布**")
-# st.table(wrong_diagnose_df)
+def handle_debug_change():
+  st.session_state.debug = not st.session_state.debug
 
-# bingli_df = DataFrame(bingli, columns=["科室", "患者姓名", "住院号", "存在问题", "病历等级"])
-# st.write("**环节病历**")
-# st.table(bingli_df)
+st.write("##")
+st.write("##")
+st.write("##")
+st.write("---")
+st.checkbox("显示调试信息", value=st.session_state.debug, on_change=handle_debug_change)
 
-# st.write("----")
-# st.write("## 参考数据")
+if not st.session_state.debug:
+  st.stop()
 
-# for table_data in filtered_data:
-#   if len(table_data) >= 1:
-#     st.table(table_data)
+st.write("## 解析结果预览")
+st.write("**指标搜索结果**")
+col1, _ = st.columns(2)
+with col1:
+  results_df = DataFrame(results.values(), columns=["指标", "搜索方法", "实际值", "目标值"])
+  results_df.sort_values(by="指标")
+  st.table(results_df)
+
+wrong_diagnose_df = DataFrame(wrong_diagnose, columns=["门急诊处方点评公布"])
+st.write("**门急诊处方点评公布**")
+st.table(wrong_diagnose_df)
+
+bingli_df = DataFrame(bingli, columns=["科室", "患者姓名", "住院号", "存在问题", "病历等级"])
+st.write("**环节病历**")
+st.table(bingli_df)
+
+st.write("----")
+st.write("## 参考数据")
+
+for table_data in filtered_data:
+  if len(table_data) >= 1:
+    st.table(table_data)
