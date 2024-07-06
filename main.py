@@ -10,7 +10,7 @@ st.set_page_config(layout="wide")
 
 st.title(f"神秘的数据统计工具")
 
-st.write("*版本：2024-07-06_2*")
+st.write("*版本：2024-07-06_3*")
 
 # data_doc_path = "/Users/lantian/Desktop/zhouji/2023年08月质控简报.docx"
 uploaded_file = st.file_uploader("选择简报文件(docx)", type="docx")
@@ -134,7 +134,7 @@ for target, search_text in targets:
 
 found_targets = set()
 
-def find_value_v3(table, target_row_name, target_column_name):
+def find_value_v3(table: list[list[str]], target_row_name, target_column_name):
   if len(table) == 0:
     return ["", ""]
 
@@ -150,7 +150,7 @@ def find_value_v3(table, target_row_name, target_column_name):
   for row in table:
     row_name = row[0:2]
     cell = row[column_index]
-    if target_row_name in row_name or ("科室" in row_name and "≥" in cell):
+    if target_row_name in row_name or ("科室" in row_name and cell.startswith("≥")):
       found_values.append(cell)
 
   if len(found_values) == 0:
