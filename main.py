@@ -39,6 +39,9 @@ data_tables: list[list[list[str]]] = []
 for table in tables:
   data_table: list[list[str]] = []
   for row in table.rows:
+    cell_texts = [remove_blanks(cell.text) for cell in row.cells]
+    if is_header_text(cell_texts[0]) and len(set(cell_texts)) <= 1:
+      continue
     data_table.append([remove_blanks(cell.text) for cell in row.cells])
   data_tables.append(data_table)
 
@@ -61,6 +64,8 @@ with col1:
   st.session_state.keshi = keshi
 
 # 合并多列表格成一列
+merged_tables: list[list[str]] = []
+# st.write("合并拆分")
 for i in range(len(data_tables)):
   table = data_tables[i]
   if len(table) < 1:
@@ -80,7 +85,12 @@ for i in range(len(data_tables)):
       if i > 0:
         for j in range(step, len(headers), step):
           new_table.append(row[j:j+step])
-    data_tables[i] = new_table
+    
+    # data_tables[i] = new_table
+    # st.table(data_tables[i])
+    merged_tables.append(new_table)
+  else:
+    merged_tables.append(table)
 
 def get_first_text(row):
   first_text = remove_blanks(row[0])
@@ -97,7 +107,10 @@ def filter_row(i: int, row: list[str]):
   return is_header or is_keshi
 
 filtered_data: list[list[list[str]]] = []
-for table in data_tables:
+for table in merged_tables:
+  # if ("业务收入不含耗材收入药占比" in table[0]):
+  #   st.write("啊啊啊啊啊")
+  #   st.table(table)
   filtered_data.append([row for i, row in enumerate(table) if filter_row(i, row)])
 
 targets = [
