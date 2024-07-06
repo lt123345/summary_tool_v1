@@ -217,6 +217,37 @@ def get_bingli():
 
 bingli = get_bingli()
 
+# 找到本期看点(未达标的指标)
+def search_metrics_not_meet():
+  search_results: list[str] = []
+  start = False
+  # st.write("**未达标指标**")
+  metric_mapping = {
+    "药占比超标": "药物构成比"
+  }
+  for paragraph in record_doc.paragraphs:
+    text = remove_blanks(paragraph.text)
+    if not start and text == "质量不达标指标及科室":
+      start = True
+    if start:
+      # st.write(text.replace(keshi, f":red[{keshi}]"))
+      if text and keshi in text:
+        metric = re.sub(r"[①②③④⑤⑥⑦⑧⑨⑩、0123456789]", "", text.split("：")[0])
+        if not metric:
+          continue
+        metric_name = metric_mapping.get(metric, metric)
+        if metric_name in results:
+          metric_value = results[metric_name][2]
+          if "率" in metric:
+            metric += f"（{metric_value}%）"
+          else:
+            metric += f"（{metric_value}）"
+        search_results.append(metric)
+    if start and text == "本月医院质量管理工作概况":
+      break
+  return search_results
+
+metrics_no_meet = search_metrics_not_meet()
 
 # st.write("## 结果下载")
 output_file_path = "./放射治疗科2023年03月医疗质量与安全检查记录.docx"
@@ -265,8 +296,9 @@ for i, item in enumerate(jiaji_bingli):
   _, huanzhe, zhuyuanhao, problem, level = item
   row = bingli_table.rows[i+1]
   row.cells[0].text = str(i+1)
+  values = ["", zhuyuanhao, huanzhe, problem, level]
   for j in range(1, 5):
-    row.cells[j].text = item[j]
+    row.cells[j].text = values[j]
 
 # 写入诊断问题
 wenti_cell = output_tables[1].cell(0, 10)
@@ -282,6 +314,15 @@ yiji_bingli = [item for item in bingli if "乙级" in item[4]]
 for i, item in enumerate(yiji_bingli):
   _, huanzhe, zhuyuanhao, problem, level = item
   text = f"（{len(wrong_diagnose)+i+1}）患者{huanzhe}（住院号：{zhuyuanhao}），存在问题：{problem}"
+  if remove_blanks(wenti_cell.text) == "":
+    wenti_cell.text = text
+  else:
+    wenti_cell.add_paragraph(text)
+
+# 写入未达标指标
+if len(metrics_no_meet) > 0:
+  i = len(wrong_diagnose) + len(yiji_bingli)
+  text = f"（{i+1}）质量不达标指标：{'、'.join(metrics_no_meet)}"
   if remove_blanks(wenti_cell.text) == "":
     wenti_cell.text = text
   else:
@@ -336,6 +377,9 @@ st.table(wrong_diagnose_df)
 bingli_df = DataFrame(bingli, columns=["科室", "患者姓名", "住院号", "存在问题", "病历等级"])
 st.write("**环节病历**")
 st.table(bingli_df)
+
+st.write("**未达标指标**")
+st.write("\n".join([f"- {item}" for item in metrics_no_meet]))
 
 st.write("----")
 st.write("## 参考数据")
