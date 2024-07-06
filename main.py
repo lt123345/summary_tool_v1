@@ -8,7 +8,9 @@ import copy
 
 st.set_page_config(layout="wide")
 
-st.title("神秘的数据统计工具")
+st.title(f"神秘的数据统计工具")
+
+st.write("*版本：2024-07-06_1*")
 
 # data_doc_path = "/Users/lantian/Desktop/zhouji/2023年08月质控简报.docx"
 uploaded_file = st.file_uploader("选择简报文件(docx)", type="docx")
