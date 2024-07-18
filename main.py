@@ -195,9 +195,9 @@ def get_special_metrics():
   finish = 0
   data_rows = table[1:]
   for row in data_rows:
-    total += int(row[total_col])
-    rujing += int(row[rujing_col])
-    finish += int(row[finish_col])
+    total += int(float(row[total_col]))
+    rujing += int(float(row[rujing_col]))
+    finish += int(float(row[finish_col]))
   return {
     "临床路径入径率": ["临床路径入径率", "= 入径数/病种总病例数", format_float(rujing / total * 100), ""],
     "临床路径完成率": ["临床路径完成率", "= 变异完成例数/病种总例数", format_float(finish / total * 100), ""],
